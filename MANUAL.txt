@@ -1,0 +1,2226 @@
+📖 DraftFinder v6.1.0 - Complete User Manual
+Table of Contents
+
+Introduction
+Installation
+Quick Start
+Core Concepts
+Command-Line Interface
+Configuration Files
+Understanding the Output
+Advanced Usage
+Troubleshooting
+Best Practices
+API Reference
+Examples &amp; Use Cases
+FAQ
+
+
+1. Introduction
+1.1 What is DraftFinder?
+DraftFinder is a production-ready tool that automatically finds and evaluates optimal draft models for speculative decoding with large language models (LLMs). Speculative decoding is an inference optimization technique that can provide 2-4x speedup without any loss in output quality.
+1.2 What is Speculative Decoding?
+Speculative decoding uses a small "draft" model to predict multiple tokens ahead, which are then verified by the larger "target" model in parallel. When predictions are correct, you get multiple tokens in one forward pass of the target model.
+Key Benefits:
+
+✅ 2-4x faster inference
+✅ No quality degradation
+✅ No model fine-tuning required
+✅ Works with existing models
+
+Requirements:
+
+Draft model must be smaller than target model
+Draft and target must have identical tokenizers
+Draft should be from the same model family (preferred)
+
+1.3 What Does DraftFinder Do?
+DraftFinder automates the process of finding compatible draft models by:
+
+Analyzing your target model's architecture and tokenizer
+Searching HuggingFace Hub for potential draft candidates
+Testing tokenizer compatibility with 23 comprehensive test strings
+Estimating realistic speedup based on model characteristics
+Ranking candidates by quality score
+Recommending optimal K value (number of speculative tokens)
+
+
+2. Installation
+2.1 System Requirements
+
+Python: 3.8 or higher
+RAM: 4GB minimum (8GB+ recommended)
+Internet: Required for HuggingFace Hub access
+OS: Linux, macOS, or Windows
+
+2.2 Dependencies
+DraftFinder requires the following Python packages:
+pip install torch transformers huggingface-hub
+
+Optional dependencies:
+pip install pyyaml  # For YAML config file support
+
+2.3 Installation Steps
+Option 1: Direct Download
+# Download the script
+wget https://path-to-draftfinder/draftfinder.py
+
+# Make it executable (Linux/macOS)
+chmod +x draftfinder.py
+
+# Run it
+python draftfinder.py --help
+
+Option 2: Clone Repository
+git clone https://github.com/your-repo/draftfinder.git
+cd draftfinder
+pip install -r requirements.txt
+python draftfinder.py --help
+
+2.4 Verify Installation
+python draftfinder.py --version
+
+Expected output:
+DraftFinder v6.1.0
+
+
+3. Quick Start
+3.1 Basic Usage
+Find draft models for GPT-2 XL:
+python draftfinder.py gpt2-xl --top-n 5
+
+3.2 Your First Run
+Let's find draft models for facebook/opt-6.7b:
+python draftfinder.py facebook/opt-6.7b --top-n 5
+
+What happens:
+
+✅ Analyzes OPT-6.7B (target model)
+✅ Searches for smaller OPT models
+✅ Tests tokenizer compatibility
+✅ Ranks by quality score
+✅ Shows top 5 recommendations
+
+Expected output:
+================================================================================
+🎯 DRAFT MODEL RECOMMENDATIONS
+================================================================================
+
+📊 Target Model: facebook/opt-6.7b
+   Parameters: 6,854,545,408
+   Memory: 13,091 MB
+   Vocab Size: 50,272
+   Family: opt
+
+🏆 Top 5 Draft Models:
+
+1. facebook/opt-125m
+    Family: opt
+    Parameters: 162,171,648
+    Size: 42.3x smaller
+    Memory: 309 MB (42.3x less memory)
+    Tokenization match: 100.0%
+    Estimated speedup: 3.85x
+    Acceptance rate: 90.0%
+    Recommended K: 6
+    Quality score: 85.2/100
+    🌟 EXCELLENT
+
+2. facebook/opt-350m
+    Family: opt
+    Parameters: 350,000,000
+    Size: 19.6x smaller
+    Memory: 668 MB (19.6x less memory)
+    Tokenization match: 100.0%
+    Estimated speedup: 2.95x
+    Acceptance rate: 90.0%
+    Recommended K: 5
+    Quality score: 78.5/100
+    ✅ GOOD
+
+3.3 Using the Results
+Copy the usage example from the output:
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Load models
+target_model = AutoModelForCausalLM.from_pretrained("facebook/opt-6.7b")
+draft_model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-6.7b")
+
+# Use with speculative decoding
+outputs = target_model.generate(
+    input_ids,
+    assistant_model=draft_model,
+    do_sample=False,
+    max_new_tokens=100
+)
+
+# Expected speedup: ~3.85x
+# Recommended K: 6
+
+
+4. Core Concepts
+4.1 Tokenizer Compatibility
+Why it matters:
+Speculative decoding requires identical tokenization between draft and target models. Even small differences can cause:
+
+❌ Incorrect predictions
+❌ Lower acceptance rates
+❌ Reduced speedup
+
+How DraftFinder tests it:
+DraftFinder runs 23 comprehensive test strings covering:
+
+Basic sentences
+Numbers and punctuation
+Special characters
+Code snippets
+Unicode and emoji
+Edge cases
+
+Compatibility criteria:
+
+✅ Vocab size must match exactly
+✅ Special tokens (EOS, BOS, PAD, UNK) must match
+✅ 95%+ of test strings must tokenize identically
+✅ Decode must produce identical text
+
+4.2 Quality Tiers
+DraftFinder assigns quality tiers based on multiple factors:
+
+
+
+Tier
+Quality Score
+Acceptance Rate
+Speedup
+Description
+
+
+
+🌟 EXCELLENT
+80-100
+≥80%
+≥2.0x
+Best choice - high speedup, high quality
+
+
+✅ GOOD
+65-79
+≥70%
+≥1.5x
+Solid choice - good speedup
+
+
+👍 ACCEPTABLE
+50-64
+≥60%
+≥1.3x
+Usable - moderate speedup
+
+
+⚡ MARGINAL
+35-49
+≥50%
+≥1.2x
+Limited benefit
+
+
+⚠️ POOR
+0-34
+<50%
+<1.2x
+Not recommended
+
+
+4.3 Quality Score Calculation
+Quality score (0-100) is calculated from:
+
+
+
+Factor
+Weight
+Description
+
+
+
+Speedup
+40%
+Estimated inference speedup
+
+
+Acceptance Rate
+30%
+% of draft tokens accepted
+
+
+Size Ratio
+15%
+How close to optimal size (15-35%)
+
+
+Family Match
+10%
+Same model family bonus
+
+
+Tokenization
+5%
+Tokenization match rate
+
+
+4.4 Size Ratio Guidelines
+
+
+
+Size Ratio
+Category
+Expected Performance
+
+
+
+< 5%
+Too small
+Poor quality, low acceptance
+
+
+5-10%
+Small
+Moderate quality
+
+
+10-35%
+Optimal
+Best balance
+
+
+35-50%
+Large
+Good quality, limited speedup
+
+
+> 50%
+Too large
+Minimal speedup benefit
+
+
+4.5 Acceptance Rate
+Definition: Percentage of draft model predictions accepted by target model.
+Factors affecting acceptance rate:
+
+Size ratio - Larger drafts = higher acceptance
+Model family - Same family = higher acceptance
+Quantization - Quantized drafts = lower acceptance
+Tokenization - Perfect match = higher acceptance
+
+Realistic ranges:
+
+🌟 Excellent: 85-95%
+✅ Good: 75-85%
+👍 Acceptable: 65-75%
+⚡ Marginal: 55-65%
+⚠️ Poor: < 55%
+
+4.6 Speedup Estimation
+Formula:
+speedup = (1 + acceptance_rate × k) / (1 + k × latency_ratio)
+
+Where:
+
+k = number of speculative tokens
+latency_ratio = draft_memory^0.65 / target_memory^0.65
+
+Example:
+
+Target: OPT-6.7B (13GB)
+Draft: OPT-125M (309MB)
+Acceptance rate: 90%
+K: 6
+
+latency_ratio = (309/13091)^0.65 = 0.059
+speedup = (1 + 0.90 × 6) / (1 + 6 × 0.059)
+        = 6.4 / 1.354
+        = 4.73x (capped at realistic 3.85x)
+
+
+5. Command-Line Interface
+5.1 Basic Syntax
+python draftfinder.py [TARGET_MODEL] [OPTIONS]
+
+5.2 Required Arguments
+
+
+
+Argument
+Description
+Example
+
+
+
+TARGET_MODEL
+HuggingFace model ID
+gpt2-xl or facebook/opt-6.7b
+
+
+5.3 Optional Arguments
+Search Options
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--top-n
+int
+5
+Number of recommendations to show
+
+
+--max-candidates
+int
+100
+Max candidates to evaluate
+
+
+--task
+str
+general
+Task type: general, code, chat, summarization
+
+
+Example:
+python draftfinder.py gpt2-xl --top-n 10 --max-candidates 200
+
+Authentication
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--token
+str
+None
+HuggingFace API token (or set HF_TOKEN env var)
+
+
+Example:
+# Option 1: CLI argument
+python draftfinder.py meta-llama/Llama-2-7b-hf --token hf_xxxxx
+
+# Option 2: Environment variable
+export HF_TOKEN=hf_xxxxx
+python draftfinder.py meta-llama/Llama-2-7b-hf
+
+Output Options
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--verbose
+flag
+False
+Enable detailed logging
+
+
+--show-test-details
+flag
+False
+Show tokenization test details (requires --verbose)
+
+
+--export
+str
+None
+Export results to JSON file
+
+
+Example:
+python draftfinder.py gpt2-xl --verbose --show-test-details --export results.json
+
+Compatibility Options
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--lenient-tokenization
+flag
+False
+Allow minor tokenization differences
+
+
+Example:
+# Strict mode (default) - requires 95%+ match
+python draftfinder.py gpt2-xl
+
+# Lenient mode - allows some mismatches
+python draftfinder.py gpt2-xl --lenient-tokenization
+
+Configuration Options
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--config
+str
+None
+Load settings from YAML/JSON file
+
+
+--generate-config
+str
+None
+Generate config template (yaml or json)
+
+
+Example:
+# Generate config template
+python draftfinder.py --generate-config yaml > config.yaml
+
+# Use config file
+python draftfinder.py --config config.yaml
+
+Utility Options
+
+
+
+Flag
+Type
+Default
+Description
+
+
+
+--version
+flag
+-
+Show version and exit
+
+
+--help
+flag
+-
+Show help message and exit
+
+
+5.4 Complete Examples
+Example 1: Basic search
+python draftfinder.py gpt2-xl --top-n 5
+
+Example 2: Verbose with export
+python draftfinder.py facebook/opt-6.7b \
+    --verbose \
+    --show-test-details \
+    --export opt_results.json \
+    --top-n 10
+
+Example 3: Gated model with token
+python draftfinder.py meta-llama/Llama-2-7b-hf \
+    --token hf_xxxxx \
+    --top-n 5 \
+    --verbose
+
+Example 4: Lenient mode for cross-family
+python draftfinder.py mistralai/Mistral-7B-v0.1 \
+    --lenient-tokenization \
+    --max-candidates 200 \
+    --top-n 10
+
+Example 5: Using config file
+# Generate template
+python draftfinder.py --generate-config yaml > my_config.yaml
+
+# Edit my_config.yaml, then run
+python draftfinder.py --config my_config.yaml --verbose
+
+
+6. Configuration Files
+6.1 Why Use Config Files?
+Config files are useful for:
+
+✅ Reproducible experiments
+✅ Sharing settings with team
+✅ Complex configurations
+✅ Batch processing
+
+6.2 Generating a Template
+YAML format:
+python draftfinder.py --generate-config yaml > config.yaml
+
+JSON format:
+python draftfinder.py --generate-config json > config.json
+
+6.3 YAML Configuration Example
+target_model: facebook/opt-6.7b
+token: null
+top_n: 5
+task: general
+max_candidates: 100
+verbose: false
+export: null
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true
+  format: table
+
+6.4 JSON Configuration Example
+{
+  "target_model": "facebook/opt-6.7b",
+  "token": null,
+  "top_n": 5,
+  "task": "general",
+  "max_candidates": 100,
+  "verbose": false,
+  "export": null,
+  "search": {
+    "include_quantized": true,
+    "min_size_ratio": 0.05,
+    "max_size_ratio": 0.5,
+    "prefer_same_family": true,
+    "prefer_official_models": true
+  },
+  "compatibility": {
+    "strict_vocab_match": true,
+    "strict_tokenization_match": true,
+    "min_tokenization_match_rate": 0.95,
+    "min_compatibility_score": 70.0,
+    "require_special_tokens": false,
+    "tokenizer_load_timeout": 30
+  },
+  "performance": {
+    "base_acceptance_rate": 0.8,
+    "same_family_bonus": 0.1,
+    "tokenizer_match_bonus": 0.05,
+    "optimal_size_ratio_min": 0.1,
+    "optimal_size_ratio_max": 0.3
+  },
+  "output": {
+    "show_warnings": true,
+    "show_compatibility_details": false,
+    "show_memory_info": true,
+    "format": "table"
+  }
+}
+
+6.5 Configuration Parameters
+Top-Level Parameters
+
+
+
+Parameter
+Type
+Description
+
+
+
+target_model
+string
+HuggingFace model ID
+
+
+token
+string
+HuggingFace API token
+
+
+top_n
+int
+Number of recommendations
+
+
+task
+string
+Task type (general/code/chat/summarization)
+
+
+max_candidates
+int
+Max candidates to evaluate
+
+
+verbose
+bool
+Enable verbose logging
+
+
+export
+string
+Export file path
+
+
+Search Section
+
+
+
+Parameter
+Type
+Description
+
+
+
+include_quantized
+bool
+Include quantized models
+
+
+min_size_ratio
+float
+Minimum size ratio (0.05 = 5%)
+
+
+max_size_ratio
+float
+Maximum size ratio (0.5 = 50%)
+
+
+prefer_same_family
+bool
+Prefer same model family
+
+
+prefer_official_models
+bool
+Prefer official models
+
+
+Compatibility Section
+
+
+
+Parameter
+Type
+Description
+
+
+
+strict_vocab_match
+bool
+Require exact vocab match
+
+
+strict_tokenization_match
+bool
+Require 95%+ tokenization match
+
+
+min_tokenization_match_rate
+float
+Minimum match rate (0.95 = 95%)
+
+
+min_compatibility_score
+float
+Minimum compatibility score
+
+
+require_special_tokens
+bool
+Require special token match
+
+
+tokenizer_load_timeout
+int
+Timeout in seconds
+
+
+Performance Section
+
+
+
+Parameter
+Type
+Description
+
+
+
+base_acceptance_rate
+float
+Base acceptance rate estimate
+
+
+same_family_bonus
+float
+Bonus for same family
+
+
+tokenizer_match_bonus
+float
+Bonus for tokenizer match
+
+
+optimal_size_ratio_min
+float
+Optimal size ratio minimum
+
+
+optimal_size_ratio_max
+float
+Optimal size ratio maximum
+
+
+Output Section
+
+
+
+Parameter
+Type
+Description
+
+
+
+show_warnings
+bool
+Show warning messages
+
+
+show_compatibility_details
+bool
+Show compatibility details
+
+
+show_memory_info
+bool
+Show memory information
+
+
+format
+string
+Output format (table/json/yaml)
+
+
+6.6 Using Config Files
+Basic usage:
+python draftfinder.py --config config.yaml
+
+Override config with CLI:
+python draftfinder.py --config config.yaml --top-n 10 --verbose
+
+CLI arguments always take precedence over config file!
+
+7. Understanding the Output
+7.1 Output Structure
+The output is divided into several sections:
+================================================================================
+🎯 DRAFT MODEL RECOMMENDATIONS
+================================================================================
+
+📊 Target Model: [target info]
+🏆 Top N Draft Models: [ranked list]
+📈 Summary Statistics: [averages]
+📝 Usage Example: [code snippet]
+
+7.2 Target Model Section
+📊 Target Model: facebook/opt-6.7b
+   Parameters: 6,854,545,408
+   Memory: 13,091 MB
+   Vocab Size: 50,272
+   Family: opt
+
+Fields explained:
+
+Parameters: Total model parameters
+Memory: Estimated memory footprint (FP16)
+Vocab Size: Tokenizer vocabulary size
+Family: Model family (gpt2, llama, opt, etc.)
+
+7.3 Draft Model Recommendations
+1. facebook/opt-125m
+    Family: opt
+    Parameters: 162,171,648
+    Size: 42.3x smaller
+    Memory: 309 MB (42.3x less memory)
+    Tokenization match: 100.0%
+    Estimated speedup: 3.85x
+    Acceptance rate: 90.0%
+    Recommended K: 6
+    Quality score: 85.2/100
+    🌟 EXCELLENT
+
+Fields explained:
+
+
+
+Field
+Description
+Interpretation
+
+
+
+Family
+Model family
+Same family = better compatibility
+
+
+Parameters
+Total parameters
+Smaller = faster draft
+
+
+Size
+Ratio to target
+10-50x smaller is optimal
+
+
+Memory
+RAM footprint
+Important for deployment
+
+
+Tokenization match
+% of tests passed
+100% = perfect compatibility
+
+
+Estimated speedup
+Inference speedup
+Higher = better
+
+
+Acceptance rate
+% tokens accepted
+Higher = better
+
+
+Recommended K
+Speculative tokens
+Use this value in generation
+
+
+Quality score
+Overall score
+0-100, higher = better
+
+
+Tier
+Quality tier
+EXCELLENT > GOOD > ACCEPTABLE
+
+
+7.4 Warnings
+Warnings indicate potential issues:
+⚠️  Warnings:
+  - Very small model - may have poor quality
+  - Quantized variant (int4)
+  - Community model (not official)
+  - Tokenization mismatch on 5% of tests
+
+Common warnings:
+
+
+
+Warning
+Meaning
+Action
+
+
+
+Very small model
+< 1% of target size
+May have low acceptance rate
+
+
+Large draft model
+> 50% of target size
+Limited speedup benefit
+
+
+Quantized variant
+INT4/INT8 quantized
+May reduce acceptance rate
+
+
+Community model
+Not official org
+Verify quality manually
+
+
+Tokenization mismatch
+< 100% match
+May cause issues
+
+
+7.5 Summary Statistics
+📈 Summary Statistics:
+   Average speedup: 3.42x
+   Average acceptance rate: 88.5%
+   Total candidates evaluated: 47
+
+What it means:
+
+Average speedup: Mean speedup across top N models
+Average acceptance rate: Mean acceptance rate
+Total candidates: How many models were evaluated
+
+7.6 Usage Example
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+# Load models
+target_model = AutoModelForCausalLM.from_pretrained("facebook/opt-6.7b")
+draft_model = AutoModelForCausalLM.from_pretrained("facebook/opt-125m")
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-6.7b")
+
+# Use with speculative decoding
+outputs = target_model.generate(
+    input_ids,
+    assistant_model=draft_model,
+    do_sample=False,
+    max_new_tokens=100
+)
+
+# Expected speedup: ~3.85x
+# Recommended K: 6
+
+Copy and paste this code to use the recommended draft model!
+7.7 Verbose Output
+With --verbose, you get detailed evaluation logs:
+  Checking: facebook/opt-125m
+    Parameters: 162,171,648
+    Vocab sizes: Target=50,272, Draft=50,272
+    Vocab match: True
+    Special tokens match: True
+    Tokenization tests: 23/23 passed
+    Tokenization match rate: 100.0%
+    Decode match: True
+    Compatibility score: 100.0/100
+  ✅ facebook/opt-125m: Quality=85, Speedup=3.85x
+
+7.8 Test Details Output
+With --verbose --show-test-details, you see individual test results:
+    📋 Failed Test Details:
+
+       Test 1: 'Hello, world!'
+         Target IDs: [15496, 11, 995, 0]
+         Draft IDs:  [15496, 6, 995, 0]
+         Target tokens: ['Hello', ',', ' world', '!']
+         Draft tokens:  ['Hello', ' ,', ' world', '!']
+
+This shows exactly where tokenization differs!
+
+8. Advanced Usage
+8.1 Working with Gated Models
+Some models (Llama, Mistral) require authentication:
+Step 1: Get HuggingFace token
+
+Go to https://huggingface.co/settings/tokens
+Create a new token with "read" access
+Accept model license (e.g., Llama 2 license)
+
+Step 2: Use token
+# Option 1: Environment variable (recommended)
+export HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxx
+python draftfinder.py meta-llama/Llama-2-7b-hf --top-n 5
+
+# Option 2: CLI argument
+python draftfinder.py meta-llama/Llama-2-7b-hf --token hf_xxxxx --top-n 5
+
+8.2 Batch Processing
+Process multiple models using a script:
+#!/bin/bash
+
+# models.txt contains one model ID per line
+while IFS= read -r model; do
+    echo "Processing: $model"
+    python draftfinder.py "$model" \
+        --top-n 5 \
+        --export "results_${model//\//_}.json" \
+        --verbose
+done < models.txt
+
+models.txt:
+gpt2-xl
+facebook/opt-6.7b
+EleutherAI/pythia-6.9b
+
+8.3 Custom Search Strategies
+Strategy 1: Aggressive search
+python draftfinder.py gpt2-xl \
+    --max-candidates 500 \
+    --top-n 20 \
+    --lenient-tokenization
+
+Strategy 2: Conservative search
+python draftfinder.py gpt2-xl \
+    --max-candidates 50 \
+    --top-n 3 \
+    --verbose
+
+Strategy 3: Cross-family exploration
+python draftfinder.py mistralai/Mistral-7B-v0.1 \
+    --lenient-tokenization \
+    --max-candidates 200 \
+    --top-n 10
+
+8.4 Filtering Results
+Use jq to filter JSON export:
+# Export results
+python draftfinder.py gpt2-xl --export results.json
+
+# Get only EXCELLENT tier models
+jq '.draft_models[] | select(.quality_tier == "EXCELLENT")' results.json
+
+# Get models with speedup > 3x
+jq '.draft_models[] | select(.estimated_speedup > 3.0)' results.json
+
+# Get top 3 by quality score
+jq '.draft_models | sort_by(.quality_score) | reverse | .[0:3]' results.json
+
+8.5 Programmatic Usage
+Use DraftFinder as a Python library:
+from draftfinder import DraftModelFinder, Task
+
+# Create finder
+finder = DraftModelFinder(
+    target_model_id="facebook/opt-6.7b",
+    token=None,
+    task=Task.GENERAL,
+    verbose=True,
+    max_candidates=100,
+    strict_tokenization=True
+)
+
+# Find draft models
+candidates = finder.find_draft_models(top_n=5)
+
+# Access results
+for candidate in candidates:
+    print(f"Model: {candidate.model_id}")
+    print(f"Speedup: {candidate.estimated_speedup:.2f}x")
+    print(f"Quality: {candidate.quality_score:.1f}")
+    print()
+
+# Export results
+finder.export_results("results.json")
+
+8.6 Integration with Transformers
+Complete integration example:
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from draftfinder import DraftModelFinder, Task
+import torch
+
+# Step 1: Find best draft model
+finder = DraftModelFinder(
+    target_model_id="facebook/opt-6.7b",
+    verbose=False
+)
+candidates = finder.find_draft_models(top_n=1)
+best_draft = candidates[0]
+
+print(f"Using draft model: {best_draft.model_id}")
+print(f"Expected speedup: {best_draft.estimated_speedup:.2f}x")
+
+# Step 2: Load models
+target = AutoModelForCausalLM.from_pretrained(
+    "facebook/opt-6.7b",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+draft = AutoModelForCausalLM.from_pretrained(
+    best_draft.model_id,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+tokenizer = AutoTokenizer.from_pretrained("facebook/opt-6.7b")
+
+# Step 3: Generate with speculative decoding
+prompt = "The future of AI is"
+inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+# Baseline (no speculative decoding)
+import time
+start = time.time()
+outputs_baseline = target.generate(
+    **inputs,
+    max_new_tokens=100,
+    do_sample=False
+)
+baseline_time = time.time() - start
+
+# With speculative decoding
+start = time.time()
+outputs_speculative = target.generate(
+    **inputs,
+    assistant_model=draft,
+    max_new_tokens=100,
+    do_sample=False
+)
+speculative_time = time.time() - start
+
+# Compare
+print(f"\nBaseline time: {baseline_time:.2f}s")
+print(f"Speculative time: {speculative_time:.2f}s")
+print(f"Actual speedup: {baseline_time/speculative_time:.2f}x")
+print(f"Expected speedup: {best_draft.estimated_speedup:.2f}x")
+
+# Verify outputs are identical
+assert torch.equal(outputs_baseline, outputs_speculative)
+print("✅ Outputs are identical!")
+
+8.7 Custom Compatibility Checks
+Create custom compatibility checker:
+from draftfinder import EnhancedTokenizerChecker
+from transformers import AutoTokenizer
+
+# Load tokenizers
+target_tok = AutoTokenizer.from_pretrained("gpt2-xl")
+draft_tok = AutoTokenizer.from_pretrained("gpt2")
+
+# Custom test strings
+custom_tests = [
+    "Your domain-specific text here",
+    "Another test case",
+    # Add your own test cases
+]
+
+# Add custom tests
+EnhancedTokenizerChecker.TEST_STRINGS.extend(custom_tests)
+
+# Run compatibility check
+result = EnhancedTokenizerChecker.verify_compatibility(
+    target_tok,
+    draft_tok,
+    "gpt2-xl",
+    "gpt2",
+    strict_tokenization=True,
+    min_match_rate=0.95
+)
+
+print(f"Compatible: {result.is_compatible}")
+print(f"Match rate: {result.tokenization_match_rate:.1%}")
+print(f"Tests passed: {result.num_passed_tests}/{result.num_test_strings}")
+
+# Show failures
+for example in result.failed_test_examples:
+    print(f"\nFailed: {example['text']}")
+    print(f"Target: {example['target_ids']}")
+    print(f"Draft:  {example['draft_ids']}")
+
+
+9. Troubleshooting
+9.1 Common Errors
+Error: "Missing required dependencies"
+❌ Missing required dependencies!
+   Missing: transformers, huggingface-hub
+
+Solution:
+pip install transformers huggingface-hub torch
+
+Error: "Failed to analyze target model"
+❌ Failed to analyze target model: gpt2-xl
+   This could be due to:
+   1. Model not found on HuggingFace Hub
+   2. Network connectivity issues
+   3. Invalid model ID
+   4. Missing authentication token (for gated models)
+
+Solutions:
+
+Check model ID spelling: gpt2-xl not gpt2xl
+Test internet connection: ping huggingface.co
+For gated models, provide token: --token hf_xxxxx
+Try a different model to verify setup
+
+Error: "Failed to load tokenizer"
+❌ Failed to load tokenizer: HTTPError 401
+
+Solution:
+Model requires authentication. Get HuggingFace token:
+export HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxx
+python draftfinder.py meta-llama/Llama-2-7b-hf
+
+Error: "No compatible draft models found"
+⚠️  No compatible draft models found!
+
+Possible causes:
+
+Target model uses unique tokenizer
+No smaller models in same family
+Search space too limited
+
+Solutions:
+# Try lenient mode
+python draftfinder.py your-model --lenient-tokenization
+
+# Increase search space
+python draftfinder.py your-model --max-candidates 500
+
+# Try verbose mode to see why models are rejected
+python draftfinder.py your-model --verbose
+
+9.2 Performance Issues
+Issue: Search is very slow
+Causes:
+
+Large search space
+Slow internet connection
+Many incompatible models
+
+Solutions:
+# Reduce search space
+python draftfinder.py your-model --max-candidates 50
+
+# Use known good models only (faster)
+# DraftFinder automatically includes known models for each family
+
+Issue: High memory usage
+Cause: Loading many tokenizers
+Solution:
+# Process in batches
+python draftfinder.py your-model --max-candidates 50 --top-n 5
+
+9.3 Unexpected Results
+Issue: Low speedup estimates
+Possible causes:
+
+Draft model too large (> 50% of target)
+Draft model too small (< 1% of target)
+Different model families
+
+Check:
+python draftfinder.py your-model --verbose
+
+Look for warnings:
+
+"Large draft model - limited speedup benefit"
+"Very small model - may have poor quality"
+
+Issue: Tokenization mismatches
+Cause: Different tokenizer versions or configurations
+Check details:
+python draftfinder.py your-model --verbose --show-test-details
+
+This shows exactly which test strings fail and why.
+9.4 Network Issues
+Issue: Connection timeout
+Error: Connection timeout when accessing HuggingFace Hub
+
+Solutions:
+# Set longer timeout (if using as library)
+import os
+os.environ['HF_HUB_DOWNLOAD_TIMEOUT'] = '300'  # 5 minutes
+
+# Use proxy if behind firewall
+export HTTP_PROXY=http://proxy.example.com:8080
+export HTTPS_PROXY=http://proxy.example.com:8080
+
+Issue: Rate limiting
+Error: 429 Too Many Requests
+
+Solution:
+Wait a few minutes, or use authentication token:
+export HF_TOKEN=hf_xxxxx
+python draftfinder.py your-model
+
+9.5 Debug Mode
+Enable maximum verbosity:
+python draftfinder.py your-model \
+    --verbose \
+    --show-test-details \
+    --max-candidates 20 \
+    2>&amp;1 | tee debug.log
+
+This creates a debug.log file with all output for troubleshooting.
+9.6 Getting Help
+If you encounter issues:
+
+Check verbose output:
+python draftfinder.py your-model --verbose
+
+
+Verify dependencies:
+pip list | grep -E "transformers|huggingface|torch"
+
+
+Test with known working model:
+python draftfinder.py gpt2-xl --top-n 3
+
+
+Check GitHub issues:
+Search for similar problems in the repository
+
+Create bug report:
+Include:
+
+DraftFinder version: python draftfinder.py --version
+Python version: python --version
+Full command used
+Error message
+Verbose output (if applicable)
+
+
+
+
+10. Best Practices
+10.1 Choosing Target Models
+Good candidates for speculative decoding:
+
+✅ Models with smaller variants in same family
+✅ Popular model families (GPT-2, OPT, Llama, Bloom)
+✅ Models > 1B parameters
+
+Poor candidates:
+
+❌ Already small models (< 1B parameters)
+❌ Unique architectures without smaller variants
+❌ Models with custom tokenizers
+
+10.2 Interpreting Results
+When to use a draft model:
+
+
+
+Quality Tier
+Use Case
+
+
+
+🌟 EXCELLENT
+Production deployment - high speedup guaranteed
+
+
+✅ GOOD
+Production deployment - solid speedup
+
+
+👍 ACCEPTABLE
+Development/testing - moderate speedup
+
+
+⚡ MARGINAL
+Experimentation only - limited benefit
+
+
+⚠️ POOR
+Not recommended - use target model alone
+
+
+Red flags:
+
+❌ Tokenization match < 95%
+❌ Acceptance rate < 60%
+❌ Speedup < 1.3x
+❌ Multiple warnings
+
+10.3 Production Deployment
+Checklist before deployment:
+
+Verify compatibility:
+python draftfinder.py your-model --verbose --show-test-details
+
+
+✅ Tokenization match = 100%
+✅ No critical warnings
+
+
+Benchmark actual performance:
+# Measure actual speedup on your data
+import time
+
+# Baseline
+start = time.time()
+output_baseline = target.generate(inputs, max_new_tokens=100)
+baseline_time = time.time() - start
+
+# Speculative
+start = time.time()
+output_spec = target.generate(inputs, assistant_model=draft, max_new_tokens=100)
+spec_time = time.time() - start
+
+print(f"Actual speedup: {baseline_time/spec_time:.2f}x")
+
+
+Verify output quality:
+# Outputs should be IDENTICAL
+assert torch.equal(output_baseline, output_spec)
+
+
+Test on representative data:
+
+Run on real production prompts
+Test edge cases
+Verify acceptance rates
+
+
+Monitor in production:
+
+Track actual speedup
+Monitor acceptance rates
+Watch for quality issues
+
+
+
+10.4 Optimization Tips
+Maximize speedup:
+
+Choose optimal size ratio (10-35%):
+# Filter results by size ratio
+python draftfinder.py your-model --export results.json
+jq '.draft_models[] | select(.size_ratio > 0.1 and .size_ratio < 0.35)' results.json
+
+
+Prefer same family:
+Same family models have higher acceptance rates
+
+Use official models:
+Better quality and compatibility
+
+Avoid over-quantization:
+INT4 quantization may reduce acceptance rate
+
+
+Minimize memory:
+
+Use quantized draft models:
+from transformers import BitsAndBytesConfig
+
+draft = AutoModelForCausalLM.from_pretrained(
+    "facebook/opt-125m",
+    quantization_config=BitsAndBytesConfig(load_in_4bit=True)
+)
+
+
+Choose smaller drafts:
+Balance speedup vs. memory usage
+
+
+10.5 Common Pitfalls
+Pitfall 1: Using incompatible tokenizers
+# ❌ WRONG - different tokenizers
+target_tok = AutoTokenizer.from_pretrained("gpt2-xl")
+draft_tok = AutoTokenizer.from_pretrained("facebook/opt-125m")
+
+# ✅ CORRECT - same tokenizer
+tokenizer = AutoTokenizer.from_pretrained("gpt2-xl")
+
+Pitfall 2: Wrong K value
+# ❌ WRONG - arbitrary K
+outputs = target.generate(inputs, assistant_model=draft, max_new_tokens=100)
+
+# ✅ CORRECT - use recommended K (not yet supported in transformers)
+# For now, transformers uses default K value
+outputs = target.generate(inputs, assistant_model=draft, max_new_tokens=100)
+
+Pitfall 3: Ignoring warnings
+⚠️  Warnings:
+  - Tokenization mismatch on 10% of tests
+
+This may cause incorrect outputs! Investigate before deploying.
+Pitfall 4: Not verifying outputs
+# ❌ WRONG - assume outputs are correct
+output = target.generate(inputs, assistant_model=draft)
+
+# ✅ CORRECT - verify during testing
+output_baseline = target.generate(inputs)
+output_spec = target.generate(inputs, assistant_model=draft)
+assert torch.equal(output_baseline, output_spec)
+
+10.6 Task-Specific Recommendations
+Code generation:
+python draftfinder.py codellama/CodeLlama-7b-hf \
+    --task code \
+    --top-n 5
+
+
+Prefer code-specific models
+Higher K values work well (6-8)
+
+Chat/Instruction:
+python draftfinder.py meta-llama/Llama-2-7b-chat-hf \
+    --task chat \
+    --top-n 5
+
+
+Use chat/instruct variants for both target and draft
+Moderate K values (4-6)
+
+Long-form generation:
+python draftfinder.py facebook/opt-13b \
+    --task general \
+    --top-n 5
+
+
+Larger drafts work better (20-35% of target)
+Lower K values (3-5)
+
+
+11. API Reference
+11.1 Core Classes
+DraftModelFinder
+Main class for finding draft models.
+class DraftModelFinder:
+    def __init__(
+        self,
+        target_model_id: str,
+        token: Optional[str] = None,
+        task: Task = Task.GENERAL,
+        verbose: bool = False,
+        max_candidates: int = 100,
+        strict_tokenization: bool = True,
+        prefer_official: bool = True,
+        show_test_details: bool = False
+    )
+
+Parameters:
+
+target_model_id: HuggingFace model ID
+token: HuggingFace API token
+task: Task type (GENERAL, CODE, CHAT, SUMMARIZATION)
+verbose: Enable detailed logging
+max_candidates: Maximum candidates to evaluate
+strict_tokenization: Require 95%+ tokenization match
+prefer_official: Prefer official models
+show_test_details: Show tokenization test details
+
+Methods:
+def find_draft_models(self, top_n: int = 5) -> List[DraftModelCandidate]:
+    """Find and rank draft models."""
+    
+def print_results(self, top_n: int = 5):
+    """Print formatted results."""
+    
+def export_results(self, output_file: str):
+    """Export results to JSON."""
+
+Example:
+finder = DraftModelFinder(
+    target_model_id="facebook/opt-6.7b",
+    verbose=True,
+    max_candidates=100
+)
+
+candidates = finder.find_draft_models(top_n=5)
+finder.print_results(top_n=5)
+finder.export_results("results.json")
+
+EnhancedTokenizerChecker
+Tokenizer compatibility verification.
+class EnhancedTokenizerChecker:
+    @staticmethod
+    def verify_compatibility(
+        tokenizer1,
+        tokenizer2,
+        model1_name: str,
+        model2_name: str,
+        strict_tokenization: bool = True,
+        min_match_rate: float = 0.95
+    ) -> CompatibilityResult:
+        """Verify tokenizer compatibility."""
+
+Example:
+from transformers import AutoTokenizer
+
+target_tok = AutoTokenizer.from_pretrained("gpt2-xl")
+draft_tok = AutoTokenizer.from_pretrained("gpt2")
+
+result = EnhancedTokenizerChecker.verify_compatibility(
+    target_tok,
+    draft_tok,
+    "gpt2-xl",
+    "gpt2"
+)
+
+print(f"Compatible: {result.is_compatible}")
+print(f"Match rate: {result.tokenization_match_rate:.1%}")
+
+ModelAnalyzer
+Model analysis and information extraction.
+class ModelAnalyzer:
+    @classmethod
+    def analyze_model(
+        cls,
+        model_id: str,
+        token: Optional[str] = None
+    ) -> Optional[ModelInfo]:
+        """Analyze model and extract information."""
+
+Example:
+info = ModelAnalyzer.analyze_model("facebook/opt-6.7b")
+
+print(f"Parameters: {info.num_parameters:,}")
+print(f"Memory: {info.memory_footprint_mb:.0f} MB")
+print(f"Family: {info.model_family}")
+
+SpeedupEstimator
+Speedup and performance estimation.
+class SpeedupEstimator:
+    @staticmethod
+    def estimate_acceptance_rate(
+        target_info: ModelInfo,
+        draft_info: ModelInfo,
+        same_family: bool,
+        tokenizer_match: bool,
+        tokenization_match_rate: float
+    ) -> float:
+        """Estimate token acceptance rate."""
+    
+    @staticmethod
+    def estimate_speedup(
+        target_info: ModelInfo,
+        draft_info: ModelInfo,
+        acceptance_rate: float,
+        k: int = 4
+    ) -> float:
+        """Estimate speedup factor."""
+    
+    @staticmethod
+    def recommend_k(
+        target_info: ModelInfo,
+        draft_info: ModelInfo,
+        acceptance_rate: float
+    ) -> int:
+        """Recommend optimal K value."""
+
+Example:
+acceptance = SpeedupEstimator.estimate_acceptance_rate(
+    target_info,
+    draft_info,
+    same_family=True,
+    tokenizer_match=True,
+    tokenization_match_rate=1.0
+)
+
+k = SpeedupEstimator.recommend_k(target_info, draft_info, acceptance)
+
+speedup = SpeedupEstimator.estimate_speedup(
+    target_info,
+    draft_info,
+    acceptance,
+    k
+)
+
+print(f"Acceptance: {acceptance:.1%}")
+print(f"K: {k}")
+print(f"Speedup: {speedup:.2f}x")
+
+11.2 Data Classes
+ModelInfo
+@dataclass
+class ModelInfo:
+    model_id: str
+    architecture: str
+    num_parameters: int
+    num_layers: int
+    hidden_size: int
+    intermediate_size: Optional[int]
+    num_attention_heads: int
+    vocab_size: int
+    quantization: QuantizationType
+    bits_per_param: float
+    memory_footprint_mb: float
+    is_peft: bool = False
+    model_family: Optional[str] = None
+    is_official: bool = False
+    is_quantized_variant: bool = False
+    base_model_id: Optional[str] = None
+
+DraftModelCandidate
+@dataclass
+class DraftModelCandidate:
+    model_id: str
+    model_info: ModelInfo
+    compatibility: CompatibilityResult
+    size_ratio: float
+    memory_ratio: float
+    estimated_speedup: float
+    recommended_k: int
+    acceptance_rate_estimate: float
+    same_family: bool
+    quality_tier: QualityTier
+    quality_score: float
+    warnings: List[str] = field(default_factory=list)
+
+CompatibilityResult
+@dataclass
+class CompatibilityResult:
+    is_compatible: bool
+    vocab_size_match: bool
+    tokenizer_match: bool
+    tokenization_match: bool
+    decode_match: bool
+    special_tokens_match: bool
+    quantization_compatible: bool
+    architecture_match: bool
+    model_accessible: bool
+    tokenization_match_rate: float = 0.0
+    num_test_strings: int = 0
+    num_passed_tests: int = 0
+    num_failed_tests: int = 0
+    failed_test_examples: List[Dict[str, Any]] = field(default_factory=list)
+    incompatibility_reasons: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    compatibility_score: float = 100.0
+
+11.3 Enums
+Task
+class Task(Enum):
+    GENERAL = "general"
+    CODE = "code"
+    CHAT = "chat"
+    SUMMARIZATION = "summarization"
+
+QuantizationType
+class QuantizationType(Enum):
+    NONE = "none"
+    INT8 = "int8"
+    INT4 = "int4"
+    GPTQ = "gptq"
+    AWQ = "awq"
+    GGUF = "gguf"
+    BNB_4BIT = "bnb-4bit"
+    BNB_8BIT = "bnb-8bit"
+
+QualityTier
+class QualityTier(Enum):
+    EXCELLENT = "EXCELLENT"
+    GOOD = "GOOD"
+    ACCEPTABLE = "ACCEPTABLE"
+    MARGINAL = "MARGINAL"
+    POOR = "POOR"
+
+
+12. Examples &amp; Use Cases
+12.1 Example 1: GPT-2 Family
+python draftfinder.py gpt2-xl --top-n 5
+
+Expected results:
+
+gpt2-medium (345M) - 3.5x speedup
+gpt2 (124M) - 4.2x speedup
+distilgpt2 (82M) - 4.5x speedup
+
+Use case: Text generation, creative writing
+12.2 Example 2: OPT Family
+python draftfinder.py facebook/opt-6.7b --top-n 5 --verbose
+
+Expected results:
+
+opt-125m - 3.85x speedup
+opt-350m - 2.95x speedup
+opt-1.3b - 2.15x speedup
+
+Use case: General language tasks, research
+12.3 Example 3: Llama Family
+export HF_TOKEN=hf_xxxxx
+python draftfinder.py meta-llama/Llama-2-7b-hf --top-n 5
+
+Expected results:
+
+TinyLlama-1.1B - 3.2x speedup
+
+Use case: Chat, instruction following
+12.4 Example 4: Code Generation
+python draftfinder.py codellama/CodeLlama-7b-hf \
+    --task code \
+    --top-n 5 \
+    --export code_results.json
+
+Use case: Code completion, code generation
+12.5 Example 5: Cross-Family Exploration
+python draftfinder.py mistralai/Mistral-7B-v0.1 \
+    --lenient-tokenization \
+    --max-candidates 200 \
+    --top-n 10 \
+    --verbose
+
+Use case: Exploring unconventional draft models
+12.6 Example 6: Production Pipeline
+#!/usr/bin/env python3
+"""Production pipeline for speculative decoding deployment."""
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from draftfinder import DraftModelFinder
+import torch
+import time
+
+def benchmark_model(target, draft, tokenizer, test_prompts, k=None):
+    """Benchmark speculative decoding performance."""
+    results = {
+        'baseline_times': [],
+        'speculative_times': [],
+        'speedups': [],
+        'outputs_match': []
+    }
+    
+    for prompt in test_prompts:
+        inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+        
+        # Baseline
+        start = time.time()
+        out_baseline = target.generate(**inputs, max_new_tokens=100)
+        baseline_time = time.time() - start
+        
+        # Speculative
+        start = time.time()
+        out_spec = target.generate(
+            **inputs,
+            assistant_model=draft,
+            max_new_tokens=100
+        )
+        spec_time = time.time() - start
+        
+        # Record results
+        results['baseline_times'].append(baseline_time)
+        results['speculative_times'].append(spec_time)
+        results['speedups'].append(baseline_time / spec_time)
+        results['outputs_match'].append(torch.equal(out_baseline, out_spec))
+    
+    return results
+
+def main():
+    # Step 1: Find best draft model
+    print("🔍 Finding optimal draft model...")
+    finder = DraftModelFinder(
+        target_model_id="facebook/opt-6.7b",
+        verbose=False,
+        max_candidates=100
+    )
+    
+    candidates = finder.find_draft_models(top_n=3)
+    
+    if not candidates:
+        print("❌ No compatible draft models found!")
+        return
+    
+    best = candidates[0]
+    print(f"✅ Selected: {best.model_id}")
+    print(f"   Expected speedup: {best.estimated_speedup:.2f}x")
+    print(f"   Quality tier: {best.quality_tier.value}")
+    
+    # Step 2: Load models
+    print("\n📥 Loading models...")
+    target = AutoModelForCausalLM.from_pretrained(
+        "facebook/opt-6.7b",
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    
+    draft = AutoModelForCausalLM.from_pretrained(
+        best.model_id,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    
+    tokenizer = AutoTokenizer.from_pretrained("facebook/opt-6.7b")
+    
+    # Step 3: Benchmark
+    print("\n⚡ Benchmarking...")
+    test_prompts = [
+        "The future of artificial intelligence is",
+        "In a world where technology has advanced beyond",
+        "Scientists have recently discovered that",
+    ]
+    
+    results = benchmark_model(target, draft, tokenizer, test_prompts)
+    
+    # Step 4: Report results
+    print("\n📊 Benchmark Results:")
+    avg_speedup = sum(results['speedups']) / len(results['speedups'])
+    all_match = all(results['outputs_match'])
+    
+    print(f"   Average speedup: {avg_speedup:.2f}x")
+    print(f"   Expected speedup: {best.estimated_speedup:.2f}x")
+    print(f"   Outputs match: {'✅ Yes' if all_match else '❌ No'}")
+    
+    if avg_speedup >= best.estimated_speedup * 0.8:
+        print("\n✅ PASSED: Actual speedup meets expectations!")
+        print("   Ready for production deployment.")
+    else:
+        print("\n⚠️  WARNING: Actual speedup below expectations.")
+        print("   Consider trying a different draft model.")
+
+if __name__ == "__main__":
+    main()
+
+
+13. FAQ
+13.1 General Questions
+Q: What is speculative decoding?
+A: Speculative decoding is an inference optimization technique where a small "draft" model predicts multiple tokens ahead, which are then verified by a larger "target" model in parallel. This can provide 2-4x speedup without any quality loss.
+Q: Do I need to fine-tune models?
+A: No! Speculative decoding works with pre-trained models as-is. No fine-tuning required.
+Q: Will output quality change?
+A: No. Outputs are mathematically identical to using the target model alone. DraftFinder verifies this during compatibility checking.
+Q: What speedup can I expect?
+A: Typically 2-4x for well-matched draft models. DraftFinder provides realistic estimates based on model characteristics.
+13.2 Compatibility Questions
+Q: Why do tokenizers need to match exactly?
+A: Speculative decoding requires the draft and target to agree on token IDs. Even small differences can cause incorrect predictions and reduce speedup.
+Q: Can I use models from different families?
+A: It's possible with --lenient-tokenization, but not recommended. Same-family models have much higher acceptance rates.
+Q: What if no compatible models are found?
+A: Try:
+
+--lenient-tokenization flag
+Increase --max-candidates
+Choose a different target model with more variants
+
+Q: How many test strings are used?
+A: DraftFinder uses 23 comprehensive test strings covering various scenarios (text, code, unicode, edge cases).
+13.3 Performance Questions
+Q: Why is my actual speedup lower than estimated?
+A: Estimates are based on ideal conditions. Actual speedup depends on:
+
+Hardware (GPU memory bandwidth)
+Batch size
+Sequence length
+Prompt characteristics
+
+Q: What is the optimal draft model size?
+A: 10-35% of target model size typically gives the best speedup/quality balance.
+Q: Should I use quantized draft models?
+A: Quantization reduces memory but may lower acceptance rate. INT8 is usually fine, INT4 may reduce speedup.
+Q: What K value should I use?
+A: Use the "Recommended K" from DraftFinder output. Typically 4-6 for most models.
+13.4 Technical Questions
+Q: Can I use DraftFinder as a Python library?
+A: Yes! See Section 8.5 for examples.
+Q: Does DraftFinder support custom models?
+A: Yes, as long as they're on HuggingFace Hub or locally accessible.
+Q: Can I add custom tokenization tests?
+A: Yes! See Section 8.7 for examples.
+Q: How is quality score calculated?
+A: Quality score (0-100) combines:
+
+Speedup (40%)
+Acceptance rate (30%)
+Size ratio optimality (15%)
+Family match (10%)
+Tokenization match (5%)
+
+13.5 Deployment Questions
+Q: Is DraftFinder production-ready?
+A: Yes! Version 6.1.0 is thoroughly tested and production-ready.
+Q: Can I use this in commercial applications?
+A: Yes, DraftFinder is MIT licensed. Check individual model licenses.
+Q: How do I monitor performance in production?
+A: Track:
+
+Actual speedup (time per token)
+Acceptance rate (if available)
+Output quality (user feedback)
+
+Q: What if a draft model is removed from HuggingFace?
+A: Download and host models locally:
+# Download once
+model.save_pretrained("./local_models/draft")
+
+# Load from local
+draft = AutoModelForCausalLM.from_pretrained("./local_models/draft")
+
+13.6 Troubleshooting Questions
+Q: Why is search taking so long?
+A: Reduce search space:
+python draftfinder.py your-model --max-candidates 50
+
+Q: How do I debug compatibility issues?
+A: Use verbose mode with test details:
+python draftfinder.py your-model --verbose --show-test-details
+
+Q: Can I use DraftFinder offline?
+A: Partially. You need internet for initial search, but can cache results:
+# First run (online)
+python draftfinder.py your-model --export results.json
+
+# Later use (offline)
+# Load results.json and use the recommended models
+
+
+Appendix A: Supported Model Families
+
+
+
+Family
+Example Models
+Typical Speedup
+
+
+
+GPT-2
+gpt2, gpt2-medium, gpt2-large, gpt2-xl
+3-4x
+
+
+OPT
+opt-125m, opt-350m, opt-1.3b, opt-2.7b, opt-6.7b
+3-4x
+
+
+Llama
+Llama-2-7b, TinyLlama-1.1B
+2-3x
+
+
+Bloom
+bloom-560m, bloom-1b1, bloom-3b, bloom-7b1
+2-3x
+
+
+Pythia
+pythia-160m, pythia-410m, pythia-1b, pythia-2.8b
+3-4x
+
+
+GPT-Neo
+gpt-neo-125m, gpt-neo-1.3B, gpt-neo-2.7B
+3-4x
+
+
+Mistral
+Mistral-7B-v0.1
+2-3x
+
+
+Qwen
+Qwen2.5-0.5B, Qwen2.5-1.5B, Qwen2.5-3B
+2-3x
+
+
+
+Appendix B: Glossary
+
+
+
+Term
+Definition
+
+
+
+Acceptance Rate
+Percentage of draft model predictions accepted by target model
+
+
+Draft Model
+Smaller model used to generate speculative tokens
+
+
+K Value
+Number of tokens the draft model predicts ahead
+
+
+Quality Score
+0-100 score combining speedup, acceptance rate, and other factors
+
+
+Quality Tier
+Category (EXCELLENT/GOOD/ACCEPTABLE/MARGINAL/POOR) based on quality score
+
+
+Size Ratio
+Draft model parameters / Target model parameters
+
+
+Speculative Decoding
+Inference optimization using draft model for parallel verification
+
+
+Target Model
+Main model whose outputs you want to accelerate
+
+
+Tokenization Match
+Percentage of test strings that tokenize identically
+
+
+
+Appendix C: Quick Reference Card
+┌─────────────────────────────────────────────────────────────┐
+│                  DRAFTFINDER QUICK REFERENCE                │
+├─────────────────────────────────────────────────────────────┤
+│ BASIC USAGE                                                 │
+│   python draftfinder.py MODEL_ID --top-n 5                  │
+│                                                             │
+│ COMMON FLAGS                                                │
+│   --verbose              Detailed output                    │
+│   --show-test-details    Show tokenization tests            │
+│   --export FILE          Export to JSON                     │
+│   --lenient-tokenization Allow minor differences            │
+│   --token TOKEN          HuggingFace API token              │
+│   --max-candidates N     Max models to evaluate             │
+│                                                             │
+│ QUALITY TIERS                                               │
+│   🌟 EXCELLENT  80-100  Use in production                   │
+│   ✅ GOOD       65-79   Solid choice                        │
+│   👍 ACCEPTABLE 50-64   Moderate benefit                    │
+│   ⚡ MARGINAL   35-49   Limited benefit                     │
+│   ⚠️ POOR       0-34    Not recommended                     │
+│                                                             │
+│ OPTIMAL SIZE RATIO                                          │
+│   10-35% of target model size                               │
+│                                                             │
+│ EXPECTED SPEEDUP                                            │
+│   Same family: 2-4x                                         │
+│   Cross family: 1.5-2.5x                                    │
+│                                                             │
+│ TROUBLESHOOTING                                             │
+│   No results?     Try --lenient-tokenization                │
+│   Slow search?    Reduce --max-candidates                   │
+│   Gated model?    Set --token or HF_TOKEN                   │
+│   Debug?          Use --verbose --show-test-details         │
+└─────────────────────────────────────────────────────────────┘
+
+
+Document Information
+
+Version: 6.1.0
+Last Updated: 2026
+License: MIT
+Author: Michael Stal, 2026
+
+For the latest version and updates, visit:
+
+GitHub: [repository-url]
+Documentation: [docs-url]
+
+
+End of User Manual
