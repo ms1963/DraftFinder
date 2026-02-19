@@ -1,0 +1,1345 @@
+📋 DraftFinder Configuration Templates
+Table of Contents
+
+Basic Templates
+Task-Specific Templates
+Advanced Templates
+Production Templates
+Research Templates
+
+
+1. Basic Templates
+1.1 Minimal Configuration (YAML)
+Filename: minimal_config.yaml
+# Minimal DraftFinder Configuration
+# Only essential settings
+
+target_model: gpt2-xl
+top_n: 5
+
+Usage:
+python draftfinder.py --config minimal_config.yaml
+
+
+1.2 Minimal Configuration (JSON)
+Filename: minimal_config.json
+{
+  "target_model": "gpt2-xl",
+  "top_n": 5
+}
+
+Usage:
+python draftfinder.py --config minimal_config.json
+
+
+1.3 Standard Configuration (YAML)
+Filename: standard_config.yaml
+# Standard DraftFinder Configuration
+# Balanced settings for most use cases
+
+target_model: facebook/opt-6.7b
+token: null  # Set HF_TOKEN environment variable instead
+top_n: 5
+task: general
+max_candidates: 100
+verbose: false
+export: null
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true
+  format: table
+
+Usage:
+python draftfinder.py --config standard_config.yaml
+
+
+1.4 Standard Configuration (JSON)
+Filename: standard_config.json
+{
+  "target_model": "facebook/opt-6.7b",
+  "token": null,
+  "top_n": 5,
+  "task": "general",
+  "max_candidates": 100,
+  "verbose": false,
+  "export": null,
+  "search": {
+    "include_quantized": true,
+    "min_size_ratio": 0.05,
+    "max_size_ratio": 0.5,
+    "prefer_same_family": true,
+    "prefer_official_models": true
+  },
+  "compatibility": {
+    "strict_vocab_match": true,
+    "strict_tokenization_match": true,
+    "min_tokenization_match_rate": 0.95,
+    "min_compatibility_score": 70.0,
+    "require_special_tokens": false,
+    "tokenizer_load_timeout": 30
+  },
+  "performance": {
+    "base_acceptance_rate": 0.8,
+    "same_family_bonus": 0.1,
+    "tokenizer_match_bonus": 0.05,
+    "optimal_size_ratio_min": 0.1,
+    "optimal_size_ratio_max": 0.3
+  },
+  "output": {
+    "show_warnings": true,
+    "show_compatibility_details": false,
+    "show_memory_info": true,
+    "format": "table"
+  }
+}
+
+
+2. Task-Specific Templates
+2.1 Code Generation Template
+Filename: code_generation_config.yaml
+# Configuration for Code Generation Tasks
+# Optimized for CodeLlama, StarCoder, etc.
+
+target_model: codellama/CodeLlama-7b-hf
+token: null  # Set via HF_TOKEN environment variable
+top_n: 5
+task: code
+max_candidates: 150
+verbose: true
+export: code_draft_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.08  # Slightly larger drafts for code
+  max_size_ratio: 0.4
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.98  # Stricter for code
+  min_compatibility_score: 75.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 45
+
+performance:
+  base_acceptance_rate: 0.75  # Conservative for code
+  same_family_bonus: 0.15
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.15  # Larger optimal range
+  optimal_size_ratio_max: 0.35
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+export HF_TOKEN=hf_xxxxx
+python draftfinder.py --config code_generation_config.yaml
+
+
+2.2 Chat/Instruction Template
+Filename: chat_config.yaml
+# Configuration for Chat/Instruction Following
+# Optimized for Llama-2-Chat, Mistral-Instruct, etc.
+
+target_model: meta-llama/Llama-2-7b-chat-hf
+token: null  # Set via HF_TOKEN environment variable
+top_n: 5
+task: chat
+max_candidates: 100
+verbose: true
+export: chat_draft_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.1
+  max_size_ratio: 0.4
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: true  # Important for chat
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.15  # Higher bonus for chat
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+export HF_TOKEN=hf_xxxxx
+python draftfinder.py --config chat_config.yaml
+
+
+2.3 Summarization Template
+Filename: summarization_config.yaml
+# Configuration for Summarization Tasks
+# Optimized for long-form text processing
+
+target_model: facebook/bart-large-cnn
+token: null
+top_n: 5
+task: summarization
+max_candidates: 100
+verbose: false
+export: summarization_draft_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.15  # Larger drafts for quality
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.2  # Prefer larger drafts
+  optimal_size_ratio_max: 0.4
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true
+  format: table
+
+
+3. Advanced Templates
+3.1 Aggressive Search Template
+Filename: aggressive_search_config.yaml
+# Aggressive Search Configuration
+# Maximum search space, lenient matching
+# Use when standard search finds nothing
+
+target_model: mistralai/Mistral-7B-v0.1
+token: null
+top_n: 10  # More results
+task: general
+max_candidates: 500  # Large search space
+verbose: true
+export: aggressive_search_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.01  # Very small models allowed
+  max_size_ratio: 0.6   # Larger drafts allowed
+  prefer_same_family: false  # Cross-family search
+  prefer_official_models: false  # Include community models
+
+compatibility:
+  strict_vocab_match: true  # Still require vocab match
+  strict_tokenization_match: false  # Lenient tokenization
+  min_tokenization_match_rate: 0.85  # Lower threshold
+  min_compatibility_score: 60.0  # Lower threshold
+  require_special_tokens: false
+  tokenizer_load_timeout: 60  # Longer timeout
+
+performance:
+  base_acceptance_rate: 0.7  # Lower expectation
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.05
+  optimal_size_ratio_max: 0.4
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+python draftfinder.py --config aggressive_search_config.yaml
+
+
+3.2 Conservative/High-Quality Template
+Filename: conservative_config.yaml
+# Conservative Configuration
+# Strict matching, high quality only
+# Use for production deployments
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 3  # Only best candidates
+task: general
+max_candidates: 50  # Smaller search space
+verbose: true
+export: conservative_results.json
+
+search:
+  include_quantized: false  # No quantized models
+  min_size_ratio: 0.1  # No tiny models
+  max_size_ratio: 0.35  # Optimal range only
+  prefer_same_family: true
+  prefer_official_models: true  # Official only
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.98  # Very strict
+  min_compatibility_score: 80.0  # High threshold
+  require_special_tokens: true
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.85  # High expectation
+  same_family_bonus: 0.15
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.15  # Narrow optimal range
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+python draftfinder.py --config conservative_config.yaml
+
+
+3.3 Memory-Optimized Template
+Filename: memory_optimized_config.yaml
+# Memory-Optimized Configuration
+# Prefer smaller drafts and quantized models
+# Use for memory-constrained environments
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 5
+task: general
+max_candidates: 100
+verbose: true
+export: memory_optimized_results.json
+
+search:
+  include_quantized: true  # Prefer quantized
+  min_size_ratio: 0.02  # Very small models OK
+  max_size_ratio: 0.15  # Smaller drafts only
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.75  # Lower due to small size
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.05  # Smaller optimal range
+  optimal_size_ratio_max: 0.15
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true  # Important for this use case
+  format: table
+
+
+3.4 Debug/Development Template
+Filename: debug_config.yaml
+# Debug Configuration
+# Maximum verbosity for troubleshooting
+# Use during development and debugging
+
+target_model: gpt2-xl
+token: null
+top_n: 10
+task: general
+max_candidates: 50  # Limited for faster iteration
+verbose: true  # Will be overridden by --verbose flag
+export: debug_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: true  # Show all details
+  show_memory_info: true
+  format: table
+
+Usage:
+python draftfinder.py --config debug_config.yaml --verbose --show-test-details
+
+
+4. Production Templates
+4.1 Production Deployment Template
+Filename: production_config.yaml
+# Production Deployment Configuration
+# Strict quality requirements, automated export
+# Use for production model selection
+
+target_model: facebook/opt-13b
+token: null  # Set via environment variable
+top_n: 3  # Only top candidates
+task: general
+max_candidates: 100
+verbose: false  # Quiet mode for automation
+export: production_draft_models.json  # Auto-export
+
+search:
+  include_quantized: false  # No quantized for production
+  min_size_ratio: 0.1
+  max_size_ratio: 0.35
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.98  # Very strict
+  min_compatibility_score: 80.0  # High quality only
+  require_special_tokens: true
+  tokenizer_load_timeout: 45
+
+performance:
+  base_acceptance_rate: 0.85
+  same_family_bonus: 0.15
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.15
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true
+  format: table
+
+Usage in CI/CD:
+#!/bin/bash
+# production_deploy.sh
+
+export HF_TOKEN=$HUGGINGFACE_TOKEN
+
+python draftfinder.py --config production_config.yaml
+
+# Check if results exist
+if [ -f production_draft_models.json ]; then
+    echo "✅ Draft models found"
+    # Parse JSON and deploy
+    python deploy_models.py production_draft_models.json
+else
+    echo "❌ No compatible draft models found"
+    exit 1
+fi
+
+
+4.2 Batch Processing Template
+Filename: batch_processing_config.yaml
+# Batch Processing Configuration
+# Process multiple models efficiently
+# Use with batch scripts
+
+target_model: PLACEHOLDER  # Will be replaced by script
+token: null
+top_n: 5
+task: general
+max_candidates: 100
+verbose: false  # Quiet for batch processing
+export: PLACEHOLDER  # Will be replaced by script
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: false  # Suppress for batch
+  show_compatibility_details: false
+  show_memory_info: true
+  format: table
+
+Batch script:
+#!/bin/bash
+# batch_process.sh
+
+MODELS=(
+    "gpt2-xl"
+    "facebook/opt-6.7b"
+    "EleutherAI/pythia-6.9b"
+)
+
+for model in "${MODELS[@]}"; do
+    echo "Processing: $model"
+    
+    # Create model-specific config
+    model_safe=$(echo $model | tr '/' '_')
+    config_file="config_${model_safe}.yaml"
+    output_file="results_${model_safe}.json"
+    
+    # Replace placeholders
+    sed "s|PLACEHOLDER|$model|g" batch_processing_config.yaml > $config_file
+    sed -i "s|PLACEHOLDER|$output_file|g" $config_file
+    
+    # Run DraftFinder
+    python draftfinder.py --config $config_file
+    
+    # Cleanup
+    rm $config_file
+done
+
+echo "✅ Batch processing complete"
+
+
+4.3 Multi-Environment Template
+Filename: multi_env_config.yaml
+# Multi-Environment Configuration
+# Different settings for dev/staging/prod
+# Use with environment variables
+
+target_model: ${TARGET_MODEL}  # From environment
+token: ${HF_TOKEN}  # From environment
+top_n: ${TOP_N:-5}  # Default 5 if not set
+task: ${TASK:-general}
+max_candidates: ${MAX_CANDIDATES:-100}
+verbose: ${VERBOSE:-false}
+export: ${EXPORT_FILE:-null}
+
+search:
+  include_quantized: ${INCLUDE_QUANTIZED:-true}
+  min_size_ratio: ${MIN_SIZE_RATIO:-0.05}
+  max_size_ratio: ${MAX_SIZE_RATIO:-0.5}
+  prefer_same_family: ${PREFER_SAME_FAMILY:-true}
+  prefer_official_models: ${PREFER_OFFICIAL:-true}
+
+compatibility:
+  strict_vocab_match: ${STRICT_VOCAB:-true}
+  strict_tokenization_match: ${STRICT_TOKENIZATION:-true}
+  min_tokenization_match_rate: ${MIN_MATCH_RATE:-0.95}
+  min_compatibility_score: ${MIN_COMPAT_SCORE:-70.0}
+  require_special_tokens: ${REQUIRE_SPECIAL_TOKENS:-false}
+  tokenizer_load_timeout: ${TIMEOUT:-30}
+
+performance:
+  base_acceptance_rate: ${BASE_ACCEPTANCE:-0.8}
+  same_family_bonus: ${FAMILY_BONUS:-0.1}
+  tokenizer_match_bonus: ${TOKENIZER_BONUS:-0.05}
+  optimal_size_ratio_min: ${OPT_SIZE_MIN:-0.1}
+  optimal_size_ratio_max: ${OPT_SIZE_MAX:-0.3}
+
+output:
+  show_warnings: ${SHOW_WARNINGS:-true}
+  show_compatibility_details: ${SHOW_DETAILS:-false}
+  show_memory_info: ${SHOW_MEMORY:-true}
+  format: ${OUTPUT_FORMAT:-table}
+
+Environment files:
+.env.development:
+TARGET_MODEL=gpt2-xl
+HF_TOKEN=
+TOP_N=10
+VERBOSE=true
+EXPORT_FILE=dev_results.json
+SHOW_DETAILS=true
+
+.env.production:
+TARGET_MODEL=facebook/opt-13b
+HF_TOKEN=${PROD_HF_TOKEN}
+TOP_N=3
+VERBOSE=false
+EXPORT_FILE=prod_results.json
+STRICT_TOKENIZATION=true
+MIN_COMPAT_SCORE=80.0
+
+Usage:
+# Development
+source .env.development
+python draftfinder.py --config multi_env_config.yaml
+
+# Production
+source .env.production
+python draftfinder.py --config multi_env_config.yaml
+
+
+5. Research Templates
+5.1 Research/Experimentation Template
+Filename: research_config.yaml
+# Research Configuration
+# Comprehensive analysis, all details
+# Use for academic research and experiments
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 20  # Many candidates for analysis
+task: general
+max_candidates: 300  # Extensive search
+verbose: true
+export: research_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.01  # Include all sizes
+  max_size_ratio: 0.7   # Even large drafts
+  prefer_same_family: false  # Cross-family analysis
+  prefer_official_models: false  # All models
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: false  # Lenient for research
+  min_tokenization_match_rate: 0.85
+  min_compatibility_score: 60.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 60
+
+performance:
+  base_acceptance_rate: 0.75
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.05
+  optimal_size_ratio_max: 0.5
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+python draftfinder.py --config research_config.yaml --verbose --show-test-details
+
+
+5.2 Benchmarking Template
+Filename: benchmark_config.yaml
+# Benchmarking Configuration
+# Consistent settings for reproducible benchmarks
+# Use for performance comparisons
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 10
+task: general
+max_candidates: 200
+verbose: true
+export: benchmark_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8  # Fixed for reproducibility
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Benchmark script:
+#!/usr/bin/env python3
+"""
+Benchmark script using config template
+"""
+import subprocess
+import json
+import time
+
+models = [
+    "gpt2-xl",
+    "facebook/opt-6.7b",
+    "EleutherAI/pythia-6.9b"
+]
+
+results = {}
+
+for model in models:
+    print(f"\n{'='*60}")
+    print(f"Benchmarking: {model}")
+    print(f"{'='*60}")
+    
+    # Update config
+    with open('benchmark_config.yaml', 'r') as f:
+        config = f.read()
+    
+    config = config.replace(
+        'target_model: facebook/opt-6.7b',
+        f'target_model: {model}'
+    )
+    
+    output_file = f"benchmark_{model.replace('/', '_')}.json"
+    config = config.replace(
+        'export: benchmark_results.json',
+        f'export: {output_file}'
+    )
+    
+    with open('temp_config.yaml', 'w') as f:
+        f.write(config)
+    
+    # Run benchmark
+    start = time.time()
+    subprocess.run([
+        'python', 'draftfinder.py',
+        '--config', 'temp_config.yaml'
+    ])
+    duration = time.time() - start
+    
+    # Load results
+    with open(output_file, 'r') as f:
+        data = json.load(f)
+    
+    results[model] = {
+        'duration': duration,
+        'candidates_found': len(data['draft_models']),
+        'best_speedup': data['draft_models'][0]['estimated_speedup'] if data['draft_models'] else 0
+    }
+
+# Print summary
+print(f"\n{'='*60}")
+print("BENCHMARK SUMMARY")
+print(f"{'='*60}")
+for model, stats in results.items():
+    print(f"\n{model}:")
+    print(f"  Search time: {stats['duration']:.2f}s")
+    print(f"  Candidates: {stats['candidates_found']}")
+    print(f"  Best speedup: {stats['best_speedup']:.2f}x")
+
+
+5.3 Ablation Study Template
+Filename: ablation_study_config.yaml
+# Ablation Study Configuration
+# Systematic parameter variation
+# Use for understanding parameter effects
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 10
+task: general
+max_candidates: 100
+verbose: true
+export: ablation_results.json
+
+# ABLATION PARAMETERS - Vary these systematically
+search:
+  include_quantized: true  # VARY: true/false
+  min_size_ratio: 0.05     # VARY: 0.01, 0.05, 0.1
+  max_size_ratio: 0.5      # VARY: 0.3, 0.5, 0.7
+  prefer_same_family: true # VARY: true/false
+  prefer_official_models: true  # VARY: true/false
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true  # VARY: true/false
+  min_tokenization_match_rate: 0.95  # VARY: 0.85, 0.90, 0.95, 0.98
+  min_compatibility_score: 70.0  # VARY: 60, 70, 80
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.8  # VARY: 0.7, 0.8, 0.9
+  same_family_bonus: 0.1     # VARY: 0.05, 0.1, 0.15
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1  # VARY: 0.05, 0.1, 0.15
+  optimal_size_ratio_max: 0.3  # VARY: 0.25, 0.3, 0.35
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Ablation script:
+#!/usr/bin/env python3
+"""
+Ablation study script
+Systematically vary parameters
+"""
+import yaml
+import subprocess
+import json
+from itertools import product
+
+# Parameters to vary
+params = {
+    'min_tokenization_match_rate': [0.85, 0.90, 0.95, 0.98],
+    'min_compatibility_score': [60.0, 70.0, 80.0],
+    'strict_tokenization_match': [True, False]
+}
+
+# Load base config
+with open('ablation_study_config.yaml', 'r') as f:
+    base_config = yaml.safe_load(f)
+
+results = []
+
+# Generate all combinations
+keys = params.keys()
+values = params.values()
+for combination in product(*values):
+    config = base_config.copy()
+    
+    # Update parameters
+    param_dict = dict(zip(keys, combination))
+    for key, value in param_dict.items():
+        if key in ['min_tokenization_match_rate', 'min_compatibility_score', 'strict_tokenization_match']:
+            config['compatibility'][key] = value
+    
+    # Save temp config
+    with open('temp_ablation.yaml', 'w') as f:
+        yaml.dump(config, f)
+    
+    # Run
+    print(f"\nTesting: {param_dict}")
+    subprocess.run(['python', 'draftfinder.py', '--config', 'temp_ablation.yaml'])
+    
+    # Load results
+    with open('ablation_results.json', 'r') as f:
+        data = json.load(f)
+    
+    results.append({
+        'parameters': param_dict,
+        'num_candidates': len(data['draft_models']),
+        'avg_quality': sum(c['quality_score'] for c in data['draft_models']) / len(data['draft_models']) if data['draft_models'] else 0
+    })
+
+# Save ablation results
+with open('ablation_summary.json', 'w') as f:
+    json.dump(results, f, indent=2)
+
+print("\n✅ Ablation study complete!")
+
+
+6. Special Use Case Templates
+6.1 Gated Models Template (Llama, Mistral)
+Filename: gated_models_config.yaml
+# Gated Models Configuration
+# For Llama, Mistral, and other gated models
+# Requires HuggingFace token with access
+
+target_model: meta-llama/Llama-2-7b-hf
+token: null  # MUST set HF_TOKEN environment variable
+top_n: 5
+task: chat
+max_candidates: 100
+verbose: true
+export: llama_draft_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.1
+  max_size_ratio: 0.4
+  prefer_same_family: true
+  prefer_official_models: true
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.95
+  min_compatibility_score: 70.0
+  require_special_tokens: true  # Important for Llama
+  tokenizer_load_timeout: 60  # Longer for gated models
+
+performance:
+  base_acceptance_rate: 0.8
+  same_family_bonus: 0.15
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.3
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+Usage:
+# Step 1: Get HuggingFace token from https://huggingface.co/settings/tokens
+# Step 2: Accept model license at https://huggingface.co/meta-llama/Llama-2-7b-hf
+# Step 3: Set token and run
+
+export HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxx
+python draftfinder.py --config gated_models_config.yaml
+
+
+6.2 Quantized Models Focus Template
+Filename: quantized_focus_config.yaml
+# Quantized Models Focus Configuration
+# Prioritize quantized models for memory efficiency
+# Use when memory is critical constraint
+
+target_model: facebook/opt-6.7b
+token: null
+top_n: 10  # More results to see quantized options
+task: general
+max_candidates: 150
+verbose: true
+export: quantized_draft_results.json
+
+search:
+  include_quantized: true  # Essential
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: true
+  prefer_official_models: false  # Quantized often community
+
+compatibility:
+  strict_vocab_match: true
+  strict_tokenization_match: true
+  min_tokenization_match_rate: 0.90  # Slightly lenient
+  min_compatibility_score: 65.0  # Slightly lenient
+  require_special_tokens: false
+  tokenizer_load_timeout: 30
+
+performance:
+  base_acceptance_rate: 0.75  # Lower for quantized
+  same_family_bonus: 0.1
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.08
+  optimal_size_ratio_max: 0.35
+
+output:
+  show_warnings: true
+  show_compatibility_details: false
+  show_memory_info: true  # Critical for this use case
+  format: table
+
+
+6.3 Cross-Family Exploration Template
+Filename: cross_family_config.yaml
+# Cross-Family Exploration Configuration
+# Explore draft models from different families
+# Experimental - use with caution
+
+target_model: mistralai/Mistral-7B-v0.1
+token: null
+top_n: 15
+task: general
+max_candidates: 300  # Large search space
+verbose: true
+export: cross_family_results.json
+
+search:
+  include_quantized: true
+  min_size_ratio: 0.05
+  max_size_ratio: 0.5
+  prefer_same_family: false  # Cross-family search
+  prefer_official_models: false  # Explore all
+
+compatibility:
+  strict_vocab_match: true  # Still critical
+  strict_tokenization_match: false  # Lenient for cross-family
+  min_tokenization_match_rate: 0.85  # Lower threshold
+  min_compatibility_score: 60.0
+  require_special_tokens: false
+  tokenizer_load_timeout: 45
+
+performance:
+  base_acceptance_rate: 0.7  # Lower expectation
+  same_family_bonus: 0.05  # Reduced bonus
+  tokenizer_match_bonus: 0.05
+  optimal_size_ratio_min: 0.1
+  optimal_size_ratio_max: 0.35
+
+output:
+  show_warnings: true
+  show_compatibility_details: true
+  show_memory_info: true
+  format: table
+
+
+7. Quick Reference
+Configuration Parameter Quick Reference
+
+
+
+Section
+Parameter
+Type
+Default
+Range/Options
+
+
+
+Top Level
+
+
+
+
+
+
+
+target_model
+string
+-
+Any HF model ID
+
+
+
+token
+string
+null
+HF API token
+
+
+
+top_n
+int
+5
+1-50
+
+
+
+task
+string
+general
+general/code/chat/summarization
+
+
+
+max_candidates
+int
+100
+10-1000
+
+
+
+verbose
+bool
+false
+true/false
+
+
+
+export
+string
+null
+File path
+
+
+Search
+
+
+
+
+
+
+
+include_quantized
+bool
+true
+true/false
+
+
+
+min_size_ratio
+float
+0.05
+0.01-0.5
+
+
+
+max_size_ratio
+float
+0.5
+0.1-1.0
+
+
+
+prefer_same_family
+bool
+true
+true/false
+
+
+
+prefer_official_models
+bool
+true
+true/false
+
+
+Compatibility
+
+
+
+
+
+
+
+strict_vocab_match
+bool
+true
+true/false
+
+
+
+strict_tokenization_match
+bool
+true
+true/false
+
+
+
+min_tokenization_match_rate
+float
+0.95
+0.5-1.0
+
+
+
+min_compatibility_score
+float
+70.0
+0-100
+
+
+
+require_special_tokens
+bool
+false
+true/false
+
+
+
+tokenizer_load_timeout
+int
+30
+10-300
+
+
+Performance
+
+
+
+
+
+
+
+base_acceptance_rate
+float
+0.8
+0.5-0.95
+
+
+
+same_family_bonus
+float
+0.1
+0-0.3
+
+
+
+tokenizer_match_bonus
+float
+0.05
+0-0.2
+
+
+
+optimal_size_ratio_min
+float
+0.1
+0.05-0.3
+
+
+
+optimal_size_ratio_max
+float
+0.3
+0.2-0.6
+
+
+Output
+
+
+
+
+
+
+
+show_warnings
+bool
+true
+true/false
+
+
+
+show_compatibility_details
+bool
+false
+true/false
+
+
+
+show_memory_info
+bool
+true
+true/false
+
+
+
+format
+string
+table
+table/json/yaml
+
+
+
+8. Template Selection Guide
+Choose your template based on your use case:
+
+
+
+Use Case
+Recommended Template
+Why
+
+
+
+First time user
+standard_config.yaml
+Balanced settings
+
+
+Production deployment
+production_config.yaml
+Strict quality, auto-export
+
+
+Code generation
+code_generation_config.yaml
+Optimized for code
+
+
+Chat/Instruction
+chat_config.yaml
+Special token handling
+
+
+Memory constrained
+memory_optimized_config.yaml
+Small drafts, quantization
+
+
+No results found
+aggressive_search_config.yaml
+Maximum search space
+
+
+Research/Analysis
+research_config.yaml
+Comprehensive results
+
+
+Benchmarking
+benchmark_config.yaml
+Reproducible settings
+
+
+Llama/Mistral
+gated_models_config.yaml
+Token handling
+
+
+Debugging
+debug_config.yaml
+Maximum verbosity
+
+
+
+End of Configuration Templates
+All templates are production-ready and can be used directly or customized for your specific needs!
